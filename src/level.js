@@ -40,6 +40,6 @@ export function hintAt(distance) {
   if (distance < 75) return '↔ Преподаватель на пути! Меняй полосу';
   if (distance > 85 && distance < 115) return '↑ Стопка заданий? Перепрыгни!';
   if (distance > 132 && distance < 162) return '↓ Под баннером нужен подкат';
-  if (distance > 854) return '⚑ Студик впереди. Пицца почти дома!';
+  if (distance > 854) return '▸ Студик впереди. Пицца почти дома!';
   return '';
 }

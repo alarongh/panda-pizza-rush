@@ -1,6 +1,6 @@
 /** Original synthesized cues: no downloaded recordings or external assets. */
 export class GameAudio {
-  constructor(enabled = false) { this.enabled = enabled; this.context = null; }
+  constructor(enabled = false) { this.supported = !!(window.AudioContext || window.webkitAudioContext); this.enabled = enabled && this.supported; this.context = null; }
   async unlock() {
     if (!this.enabled) return;
     try {

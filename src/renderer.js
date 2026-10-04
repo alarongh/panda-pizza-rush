@@ -16,6 +16,13 @@ export class Renderer {
       const previous = this.ctx; this.ctx = image.getContext('2d'); this.ctx.translate(140, 270);
       this.drawObject(type); this.ctx = previous; this.sprites.set(type, image);
     }
+    // Cache architecture/sky once. Only moving road details and entities are
+    // painted each frame, keeping high-DPI mobile rendering inexpensive.
+    this.background = document.createElement('canvas');
+    this.background.width = W * this.density; this.background.height = H * this.density;
+    const liveContext = this.ctx;
+    this.ctx = this.background.getContext('2d', { alpha: false });
+    this.ctx.scale(this.density, this.density); this.drawCampusBase(); this.ctx = liveContext;
   }
   poly(points, color, stroke = null, width = 2) {
     const c = this.ctx; c.beginPath(); points.forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y)); c.closePath();
@@ -108,7 +115,7 @@ export class Renderer {
     const c = this.ctx; c.save(); c.translate(x,y); c.scale(s,s); c.rotate(rotation);
     c.drawImage(this.sprites.get(type),-140,-270); c.restore();
   }
-  campus(distance) {
+  drawCampusBase() {
     const c = this.ctx;
     const sky = c.createLinearGradient(0,0,0,340); sky.addColorStop(0,'#67cdd7'); sky.addColorStop(1,'#d5efdf'); c.fillStyle=sky; c.fillRect(0,0,W,H);
     this.ellipse(358,119,39,39,'#fff0b1'); this.ellipse(350,115,51,51,'#fff2be35');
@@ -135,6 +142,10 @@ export class Renderer {
     this.poly([[185,220],[265,220],[530,800],[-80,800]],'#efc889');
     this.poly([[185,220],[-80,800],[-110,800],[177,220]],'#fbe3ab');
     this.poly([[265,220],[530,800],[565,800],[273,220]],'#fbe3ab');
+    const light=c.createLinearGradient(0,200,450,800); light.addColorStop(0,'#fff0c000');light.addColorStop(1,'#ffecb31a');c.fillStyle=light;c.fillRect(0,200,W,600);
+  }
+  campus(distance) {
+    const c = this.ctx; c.drawImage(this.background,0,0,W,H);
     // Pavers and lane markers move in perspective with the actual run.
     for (let z = 3-(distance%7);z<100;z+=7) {
       if(z<0) continue;
@@ -152,8 +163,6 @@ export class Renderer {
       this.sprite('tree',225-273*p.s,p.y,p.s*.95);
       this.sprite('planter',225+254*p.s,p.y,p.s*.8);
     }
-    // Warm light across the foreground without reducing silhouette contrast.
-    const light=c.createLinearGradient(0,200,450,800); light.addColorStop(0,'#fff0c000');light.addColorStop(1,'#ffecb31a');c.fillStyle=light;c.fillRect(0,200,W,600);
   }
   panda(x,y,action,phase,jumpHeight,hit=false,finish=false) {
     const c=this.ctx, run=this.reducedMotion?0:Math.sin(phase*14), stride=action==='slide'?0:run;
@@ -175,7 +184,6 @@ export class Renderer {
     this.ellipse(-24,-135,17,18,'#263b40');this.ellipse(24,-135,17,18,'#263b40');
     this.ellipse(-24,-137,8,8,'#415052');this.ellipse(24,-137,8,8,'#415052');
     this.ellipse(0,-119,40,35,'#fbf3df');this.ellipse(9,-118,30,30,'#fff9e9');
-    this.ellipse(-29,-111,10,19,'#293e40');this.ellipse(29,-111,10,19,'#293e40');
     this.ellipse(-7,-137,12,6,'#fffdf1'); this.round(-26,-93,52,11,5,'#c44239');
     if(finish){this.ellipse(-42,-59,7,7,'#ffe289');this.ellipse(43,-58,7,7,'#ffe289');}
     c.restore();
@@ -202,7 +210,7 @@ export class Renderer {
     }
     if(distance>FINISH_DISTANCE-95){const z=FINISH_DISTANCE-distance;const p=this.project(1,z);this.sprite('door',p.x,p.y,p.s*.92);}
     const player=this.project(game.state==='menu'?1:game.x,0);
-    this.panda(player.x,player.y,game.action,active?game.elapsed:this.time*.45,game.jumpHeight,game.state==='gameover',game.state==='finish');
+    this.panda(player.x,player.y,game.action,game.state==='menu'?this.time*.45:game.elapsed,game.jumpHeight,game.state==='gameover',game.state==='finish');
     if(game.state==='gameover'&&game.hit){const p=this.project(game.hit.lane,0);c.globalAlpha=.8;this.sprite(game.hit.type,p.x,p.y,1);c.globalAlpha=1;}
     if(game.state!=='paused') {
       for(const effect of this.effects){effect.x+=effect.vx*dt;effect.y+=effect.vy*dt;effect.vy+=160*dt;effect.life-=dt;c.globalAlpha=Math.min(1,effect.life*3);this.round(effect.x,effect.y,5,8,2,effect.color);}

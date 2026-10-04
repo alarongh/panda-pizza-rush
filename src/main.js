@@ -20,7 +20,7 @@ const game=new RunnerGame({onEvent(event){
   }
   if(event.type==='pause'||event.type==='resume')showScreen();
 }});
-function soundLabel(){ui.sound.setAttribute('aria-pressed',String(audio.enabled));ui.sound.setAttribute('aria-label',audio.enabled?'Выключить звук':'Включить звук');ui.sound.textContent=audio.enabled?'♫':'♪';}
+function soundLabel(){ui.sound.hidden=!audio.supported;ui.sound.setAttribute('aria-pressed',String(audio.enabled));ui.sound.setAttribute('aria-label',audio.enabled?'Выключить звук':'Включить звук');ui.sound.textContent=audio.enabled?'♫':'♪';}
 soundLabel();
 function showScreen(){
   const state=game.state,playing=state==='playing',paused=state==='paused',result=state==='finish'||state==='gameover';
@@ -43,7 +43,7 @@ function showScreen(){
   }
   if(!playing) {ui.feedback.textContent='';feedbackTime=0;newInput.cancel();}
 }
-function start(){game.reset();renderer.effects=[];previous=performance.now();audio.unlock();showScreen();ui.primary.blur();}
+function start(){game.reset();renderer.effects=[];renderer.hitTime=0;previous=performance.now();audio.unlock();showScreen();ui.primary.blur();}
 function pause(){if(game.state==='playing'){game.pause();audio.suspend();}}
 function resume(){previous=performance.now();audio.unlock();game.resume();ui.primary.blur();}
 function togglePause(){if(game.state==='playing')pause();else if(game.state==='paused')resume();}
@@ -56,7 +56,7 @@ document.querySelectorAll('[data-action]').forEach(button=>{
   button.addEventListener('pointerdown',event=>{event.preventDefault();audio.unlock();game.input(button.dataset.action);});
   button.addEventListener('click',event=>{if(event.detail===0){audio.unlock();game.input(button.dataset.action);}});
 });
-platform.onSuspend(pause);
+platform.onSuspend(()=>{pause();audio.suspend();});
 platform.onFocus(()=>{previous=performance.now();});
 // Resume is deliberate: returning to a tab never restarts a dangerous run.
 let lastHud='';
